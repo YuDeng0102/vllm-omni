@@ -74,6 +74,8 @@ _MAX_VLM_INPUT_PIL_SIDE_LENGTH = 384 * 2
 _MAX_INPUT_IMAGE_PIXELS = 2048 * 2048
 _MAX_INPUT_IMAGE_SIDE_LENGTH = 2048 * 2
 
+# Each installation key must map to exactly one separate-CFG mode. Changing
+# that mode must also change the key so the runtime reinstalls the adapter.
 _BOOGU_CACHE_SINGLE_KEY = "boogu-single-pass"
 _BOOGU_CACHE_PAIRED_KEY = "boogu-paired-cfg"
 
@@ -357,6 +359,8 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
         if parallel_config.use_hsdp:
             raise NotImplementedError("HSDP is not supported by BooguImagePipeline.")
         cache_backend = str(self.od_config.cache_backend or "none").lower()
+        if cache_backend == "cache_dit" and self._is_turbo:
+            raise NotImplementedError("Cache-DiT is not supported by BooguImageTurboPipeline.")
         if cache_backend == "cache_dit" and (parallel_config.cfg_parallel_size or 1) > 1:
             raise NotImplementedError("CFG parallelism with Cache-DiT is not supported by BooguImagePipeline.")
         if cache_backend not in ("", "none", "cache_dit"):
@@ -384,7 +388,7 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
             return
 
         if prediction_count == 3:
-            logger.warning(
+            logger.warning_once(
                 "Boogu double guidance uses three transformer predictions per step; "
                 "running this request without Cache-DiT."
             )

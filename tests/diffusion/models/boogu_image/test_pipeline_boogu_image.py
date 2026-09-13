@@ -14,6 +14,7 @@ Two groups:
 """
 
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 import torch
@@ -277,6 +278,23 @@ def test_constructor_accepts_cache_dit_on_single_gpu(mock_dependencies):
     assert pipeline.od_config.cache_backend == "cache_dit"
 
 
+def test_constructor_rejects_cache_dit_for_turbo(mock_dependencies):
+    from vllm_omni.diffusion.models.boogu_image import BooguImageTurboPipeline
+
+    od_config = OmniDiffusionConfig(
+        model="dummy-boogu",
+        tf_model_config=TransformerConfig(params={}),
+        dtype=torch.float32,
+        cache_backend="cache_dit",
+    )
+
+    with pytest.raises(NotImplementedError, match="Cache-DiT is not supported by BooguImageTurboPipeline"):
+        BooguImageTurboPipeline(od_config=od_config)
+
+    # Reject the unsupported combination before loading any model components.
+    mock_dependencies["mllm_wrapper"].model.to.assert_not_called()
+
+
 @pytest.mark.parametrize("cfg_parallel_size", [2, 3])
 def test_constructor_accepts_cfg_parallel(mock_dependencies, cfg_parallel_size):
     from vllm_omni.diffusion.models.boogu_image.pipeline_boogu_image import (
@@ -333,7 +351,7 @@ def test_prepare_cache_dit_request_selects_safe_profile(
         BooguImagePipeline,
     )
 
-    prepared = []
+    prepared: list[Any] = []
     cache_config = DiffusionCacheConfig()
     pipeline = object.__new__(BooguImagePipeline)
     pipeline.od_config = SimpleNamespace(
@@ -738,7 +756,7 @@ def test_forward_cfg_off_when_guidance_one():
 
 def test_forward_prepares_single_pass_cache_dit_profile():
     pipeline = _make_forward_pipeline()
-    prepared = []
+    prepared: list[Any] = []
     cache_config = DiffusionCacheConfig()
     pipeline.od_config = SimpleNamespace(
         cache_backend="cache_dit",
