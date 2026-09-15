@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import io
 import os
+import re
 import time
 from pathlib import Path
 
@@ -70,6 +71,7 @@ def _run_boogu(*, model: str, output_path: Path, cache_dit: bool) -> Image.Image
     ]
     if cache_dit:
         server_args.extend(CACHE_DIT_ARGS)
+        server_args.append("--enable-cache-dit-summary")
 
     with requests.Session() as client:
         # Loopback test traffic must not be routed through a developer's HTTP_PROXY.
@@ -106,7 +108,10 @@ def _run_boogu(*, model: str, output_path: Path, cache_dit: bool) -> Image.Image
 
 @pytest.mark.benchmark
 @hardware_test(res={"cuda": "H100"}, num_cards=1)
-def test_boogu_cache_dit_matches_dense(accuracy_artifact_root: Path) -> None:
+def test_boogu_cache_dit_matches_dense(
+    accuracy_artifact_root: Path,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
     model = _model_name()
     output_dir = model_output_dir(accuracy_artifact_root, MODEL_ID)
 
@@ -115,11 +120,16 @@ def test_boogu_cache_dit_matches_dense(accuracy_artifact_root: Path) -> None:
         output_path=output_dir / "dense.png",
         cache_dit=False,
     )
+    capfd.readouterr()
     cached = _run_boogu(
         model=model,
         output_path=output_dir / "cache_dit.png",
         cache_dit=True,
     )
+    captured = capfd.readouterr()
+    cache_steps = [int(value) for value in re.findall(r"(?:CFG )?Cache Steps:\s*(\d+)", captured.out + captured.err)]
+    assert cache_steps, "Cache-DiT summary did not report cache-step counters"
+    assert any(steps > 0 for steps in cache_steps), f"Cache-DiT did not reuse any steps: {cache_steps}"
 
     assert_similarity(
         model_name=f"{MODEL_ID}-cache-dit-vs-dense",
