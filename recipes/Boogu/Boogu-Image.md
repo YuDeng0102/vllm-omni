@@ -363,7 +363,7 @@ vllm serve Boogu/Boogu-Image-0.1-Edit \
   --port 8091
 ```
 
-### Verification
+### Image-editing verification
 
 Edit an image with `/v1/images/edits` (the model-card example — change a photo
 to a colored-pencil drawing). Diffusion parameters are plain multipart form
