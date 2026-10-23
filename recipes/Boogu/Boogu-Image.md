@@ -45,8 +45,9 @@ distilled Turbo and Edit-Turbo checkpoints run the four-step DMD path through
 
 This recipe documents supported configurations for CUDA GPU serving. The native
 pipeline supports single-GPU inference and classifier-free-guidance (CFG)
-parallelism. Cache-DiT acceleration is supported on a single GPU. CPU offload
-and other multi-GPU dimensions remain unsupported (see Notes).
+parallelism. Base Cache-DiT has been validated with 2-GPU CFG parallelism and
+4-GPU Ulysses sequence parallelism. CPU offload, tensor parallelism, and other
+multi-GPU dimensions remain unsupported (see Notes).
 
 ## GPU
 
@@ -112,8 +113,9 @@ curl -s http://localhost:8091/v1/chat/completions \
 - **Recommended settings:** `num_inference_steps=28`-`50`, `guidance_scale=4.0`.
   The model's maximum native resolution is 2K.
 - **Known limitations (not yet supported):** CPU offload
-  (`--enable-cpu-offload` / `--enable-layerwise-offload`) and TP / SP / HSDP
-  multi-GPU parallelism.
+  (`--enable-cpu-offload` / `--enable-layerwise-offload`), tensor parallelism,
+  and HSDP. Base Ulysses support requires the validated advanced-UAA setup
+  described below; Edit and Turbo multi-GPU Cache-DiT are not yet validated.
 
 #### Cache-DiT acceleration
 
@@ -136,9 +138,41 @@ The pipeline selects a safe cache profile at each request boundary:
 | CFG off (`guidance_scale=1`) | 1 | Single-pass cache |
 | Base text CFG | 2 | Separate positive/negative CFG caches |
 
-Cache-DiT is currently limited to one GPU for Boogu. Combining
-`--cache-backend cache_dit` with `--cfg-parallel-size > 1` is rejected during
-startup. Other cache backends remain unsupported.
+For Base T2I, Cache-DiT can be combined with CFG parallelism on two GPUs:
+
+```bash
+vllm serve Boogu/Boogu-Image-0.1-Base \
+  --omni \
+  --num-gpus 2 \
+  --cfg-parallel-size 2 \
+  --cache-backend cache_dit \
+  --cache-config \
+  '{"max_warmup_steps":4,"max_continuous_cached_steps":6,"residual_diff_threshold":0.12}' \
+  --enable-cache-dit-summary \
+  --port 8091
+```
+
+Base T2I also has a validated 4-GPU Ulysses + Cache-DiT configuration. Since
+the model's KV-head count is not divisible by four, use advanced UAA mode:
+
+```bash
+vllm serve Boogu/Boogu-Image-0.1-Base \
+  --omni \
+  --num-gpus 4 \
+  --ulysses-degree 4 \
+  --ulysses-mode advanced_uaa \
+  --cache-backend cache_dit \
+  --cache-config \
+  '{"max_warmup_steps":4,"max_continuous_cached_steps":6,"residual_diff_threshold":0.12}' \
+  --enable-cache-dit-summary \
+  --port 8091
+```
+
+The two validated multi-GPU paths preserve image quality with the conservative
+profile. Cache-DiT counters are emitted for the Ulysses path; CFG-parallel
+workers install separate positive/negative cache contexts, but their per-rank
+summary counters are not yet surfaced consistently. Other cache backends remain
+unsupported.
 
 ### 2 x H100 (CFG parallel, Base T2I)
 
@@ -587,9 +621,12 @@ instead; it is rejected on SM90.
 The checked-in single-device A40 measurements remain the current Boogu
 baseline: Base T2I is about 16.37 s request latency at concurrency 1 and Edit
 text-only guidance is about 29.64 s for 512x512, 28-step requests, with roughly
-36.8 GB peak memory. CFG-parallel A/B numbers must be collected on the same
-hardware and software revision before reporting a speedup; do not compare a
-multi-GPU result against these A40 numbers as if it were a controlled A/B.
+36.8 GB peak memory. A same-seed local A/B on 4x A100 (512x512, 28 steps,
+guidance 4.0) measured 10.03 s dense Ulysses versus 7.70 s with conservative
+Cache-DiT (PSNR 32.40 dB, SSIM 0.9411). A 2x A100 CFG-parallel A/B measured
+7.71 s dense versus 8.06 s with Cache-DiT (PSNR 32.94 dB, SSIM 0.9492), so
+the latter confirms quality and startup compatibility but should not be claimed
+as a speedup at this workload size.
 
 Run the dedicated perf rows in
 `tests/dfx/perf/tests/test_boogu_image_vllm_omni.json` and
