@@ -135,16 +135,19 @@ The following tables show which models support each feature:
 >    like Cosmos3 swap their reasoner/generator components for model-level
 >    offload; see the [CPU Offload Guide](diffusion/cpu_offload.md).
 > 2. The **💾Quantization** column is collapsed for readability. See [Quantization](quantization/overview.md) for per-method and per-model support details.
-> 3. Boogu-Image Cache-DiT is validated for the Base checkpoint on one GPU. It
->    cannot currently be combined with CFG parallelism; Edit and Edit-Turbo are
->    not yet validated.
+> 3. Boogu-Image Base Cache-DiT is validated with 2-GPU CFG parallelism and
+>    4-GPU Ulysses sequence parallelism at 512x512. Use the conservative cache
+>    profile (`max_warmup_steps=4`, `max_continuous_cached_steps=6`,
+>    `residual_diff_threshold=0.12`). Degree-4 Ulysses requires
+>    `ulysses_mode=advanced_uaa` because Boogu's KV-head count is not divisible
+>    by 4. Edit and Edit-Turbo multi-GPU Cache-DiT remain unvalidated.
 
 ### ImageGen
 
 | Model                    | ⚡TeaCache | ⚡Cache-DiT | 🔀SP (Ulysses & Ring) | 🔀CFG-Parallel | 🔀Tensor-Parallel | 🔀Pipeline-Parallel | 🔀HSDP | 💾CPU Offload (Layerwise) | 💾VAE-Patch-Parallel | 💾Quantization | 🔄Step Execution |
 |--------------------------|:---------:|:----------:|:---------------------:|:--------------:|:-----------------:|:-------------------:|:------:|:-------------------------:|:--------------------:|:--------------:|:----------------:|
 | **Bagel**                |     ✅     |     ✅      |           ✅           |       ✅        |         ✅         |          ❌          |   ✅    |             ✅             |          ❌           |       ❌        |        ✅         |
-| **Boogu-Image**          |     ❌     |     ✅*     |           ❌           |       ✅        |         ❌         |          ❌          |   ❌    |             ❌             |          ❌           |       ❌        |        ❌         |
+| **Boogu-Image**          |     ❌     |     ✅*     |          ✅*           |      ✅*        |         ❌         |          ❌          |   ❌    |             ❌             |          ❌           |       ❌         |        ❌         |
 | **FLUX.1-dev**           |     ✅     |     ✅      |           ❌           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |
 | **FLUX.1-schnell**       |     ❌     |     ✅      |           ❌           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |
 | **FLUX.2-klein**         |     ✅     |     ✅      |           ✅           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |

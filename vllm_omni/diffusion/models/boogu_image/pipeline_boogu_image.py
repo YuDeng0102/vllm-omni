@@ -442,8 +442,10 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
         cache_backend = str(self.od_config.cache_backend or "none").lower()
         if cache_backend == "cache_dit" and self._is_turbo:
             raise NotImplementedError("Cache-DiT is not supported by BooguImageTurboPipeline.")
-        if cache_backend == "cache_dit" and (parallel_config.cfg_parallel_size or 1) > 1:
-            raise NotImplementedError("CFG parallelism with Cache-DiT is not supported by BooguImagePipeline.")
+        # The Boogu Cache-DiT adapter keeps separate positive/negative CFG
+        # contexts, so Base T2I can combine Cache-DiT with CFG parallelism.
+        # Sequence-parallel + CFG-parallel remains guarded above until its
+        # combined guidance semantics have a parity result.
         if cache_backend not in ("", "none", "cache_dit"):
             raise NotImplementedError(
                 f"Cache backend '{self.od_config.cache_backend}' is not supported by BooguImagePipeline."
