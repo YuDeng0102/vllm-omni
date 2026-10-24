@@ -373,11 +373,6 @@ def test_load_weights_maps_mllm_and_preserves_transformer():
         (DiffusionParallelConfig(tensor_parallel_size=2), "none", "Tensor parallelism"),
         (DiffusionParallelConfig(ring_degree=2), "none", "Ulysses only"),
         (
-            DiffusionParallelConfig(ulysses_degree=2, cfg_parallel_size=2),
-            "none",
-            "CFG parallelism is not validated",
-        ),
-        (
             DiffusionParallelConfig(use_hsdp=True, hsdp_shard_size=2),
             "none",
             "HSDP",
@@ -444,6 +439,30 @@ def test_constructor_accepts_cache_dit_with_cfg_parallel(mock_dependencies):
     pipeline = BooguImagePipeline(od_config=od_config)
 
     assert pipeline.od_config.cache_backend == "cache_dit"
+    assert pipeline.od_config.parallel_config.cfg_parallel_size == 2
+
+
+def test_constructor_accepts_cache_dit_with_cfg_and_ulysses(mock_dependencies):
+    from vllm_omni.diffusion.models.boogu_image.pipeline_boogu_image import (
+        BooguImagePipeline,
+    )
+
+    od_config = OmniDiffusionConfig(
+        model="dummy-boogu",
+        tf_model_config=TransformerConfig(params={}),
+        dtype=torch.float32,
+        parallel_config=DiffusionParallelConfig(
+            ulysses_degree=2,
+            cfg_parallel_size=2,
+            ulysses_mode="advanced_uaa",
+        ),
+        cache_backend="cache_dit",
+    )
+
+    pipeline = BooguImagePipeline(od_config=od_config)
+
+    assert pipeline.od_config.cache_backend == "cache_dit"
+    assert pipeline.od_config.parallel_config.sequence_parallel_size == 2
     assert pipeline.od_config.parallel_config.cfg_parallel_size == 2
 
 

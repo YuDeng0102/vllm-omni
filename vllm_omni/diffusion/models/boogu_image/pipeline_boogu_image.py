@@ -407,14 +407,6 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
         if parallel_config.tensor_parallel_size > 1:
             raise NotImplementedError("Tensor parallelism is not supported by BooguImagePipeline.")
         if (parallel_config.sequence_parallel_size or 1) > 1:
-            if parallel_config.cfg_parallel_size > 1:
-                # SP × CFG-Parallel is unvalidated: the combined path runs
-                # without crashing but drifts far from the SP=1 baseline
-                # (~19 dB PSNR at 4 steps), so guidance semantics differ.
-                # Remove this guard only alongside a parity test.
-                raise NotImplementedError(
-                    "BooguImagePipeline: sequence parallelism combined with CFG parallelism is not validated."
-                )
             if parallel_config.ring_degree > 1 or getattr(parallel_config, "allgather_degree", 1) > 1:
                 raise NotImplementedError(
                     "BooguImagePipeline currently supports sequence parallelism through Ulysses only."
@@ -444,8 +436,9 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
             raise NotImplementedError("Cache-DiT is not supported by BooguImageTurboPipeline.")
         # The Boogu Cache-DiT adapter keeps separate positive/negative CFG
         # contexts, so Base T2I can combine Cache-DiT with CFG parallelism.
-        # Sequence-parallel + CFG-parallel remains guarded above until its
-        # combined guidance semantics have a parity result.
+        # CFG parallelism and Ulysses use orthogonal process groups. Each CFG
+        # branch can therefore run its own Ulysses attention before the branch
+        # predictions are gathered and combined.
         if cache_backend not in ("", "none", "cache_dit"):
             raise NotImplementedError(
                 f"Cache backend '{self.od_config.cache_backend}' is not supported by BooguImagePipeline."

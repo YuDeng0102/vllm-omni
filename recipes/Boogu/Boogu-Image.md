@@ -45,9 +45,10 @@ distilled Turbo and Edit-Turbo checkpoints run the four-step DMD path through
 
 This recipe documents supported configurations for CUDA GPU serving. The native
 pipeline supports single-GPU inference and classifier-free-guidance (CFG)
-parallelism. Base Cache-DiT has been validated with 2-GPU CFG parallelism and
-4-GPU Ulysses sequence parallelism. CPU offload, tensor parallelism, and other
-multi-GPU dimensions remain unsupported (see Notes).
+parallelism. Base Cache-DiT has been validated with 2-GPU CFG parallelism,
+4-GPU Ulysses sequence parallelism, and the combined 2-GPU CFG × 2-GPU
+Ulysses topology. CPU offload, tensor parallelism, and HSDP remain unsupported
+(see Notes).
 
 ## GPU
 
@@ -168,11 +169,29 @@ vllm serve Boogu/Boogu-Image-0.1-Base \
   --port 8091
 ```
 
-The two validated multi-GPU paths preserve image quality with the conservative
-profile. Cache-DiT counters are emitted for the Ulysses path; CFG-parallel
-workers install separate positive/negative cache contexts, but their per-rank
-summary counters are not yet surfaced consistently. Other cache backends remain
-unsupported.
+The two dimensions can also be composed on four GPUs: two CFG branches, with
+two Ulysses ranks assigned to each branch:
+
+```bash
+vllm serve Boogu/Boogu-Image-0.1-Base \
+  --omni \
+  --num-gpus 4 \
+  --cfg-parallel-size 2 \
+  --ulysses-degree 2 \
+  --ulysses-mode advanced_uaa \
+  --cache-backend cache_dit \
+  --cache-config \
+  '{"max_warmup_steps":4,"max_continuous_cached_steps":6,"residual_diff_threshold":0.12}' \
+  --enable-cache-dit-summary \
+  --port 8091
+```
+
+The three validated multi-GPU paths preserve image quality with the
+conservative profile. Cache-DiT counters are emitted reliably for the pure
+Ulysses path. CFG-parallel workers install separate positive/negative cache
+contexts, but their per-rank summary counters are not yet surfaced
+consistently, including in the composed CFG × Ulysses path. Other cache
+backends remain unsupported.
 
 ### 2 x H100 (CFG parallel, Base T2I)
 
@@ -626,7 +645,9 @@ guidance 4.0) measured 10.03 s dense Ulysses versus 7.70 s with conservative
 Cache-DiT (PSNR 32.40 dB, SSIM 0.9411). A 2x A100 CFG-parallel A/B measured
 7.71 s dense versus 8.06 s with Cache-DiT (PSNR 32.94 dB, SSIM 0.9492), so
 the latter confirms quality and startup compatibility but should not be claimed
-as a speedup at this workload size.
+as a speedup at that workload size. The composed 4x A100 CFG=2 × Ulysses=2
+path measured 4.20 s dense versus 3.70 s with Cache-DiT (PSNR 32.60 dB,
+SSIM 0.9471).
 
 Run the dedicated perf rows in
 `tests/dfx/perf/tests/test_boogu_image_vllm_omni.json` and
