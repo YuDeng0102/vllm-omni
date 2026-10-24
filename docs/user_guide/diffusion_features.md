@@ -135,12 +135,13 @@ The following tables show which models support each feature:
 >    like Cosmos3 swap their reasoner/generator components for model-level
 >    offload; see the [CPU Offload Guide](diffusion/cpu_offload.md).
 > 2. The **💾Quantization** column is collapsed for readability. See [Quantization](quantization/overview.md) for per-method and per-model support details.
+
 ### ImageGen
 
 | Model                    | ⚡TeaCache | ⚡Cache-DiT | 🔀SP (Ulysses & Ring) | 🔀CFG-Parallel | 🔀Tensor-Parallel | 🔀Pipeline-Parallel | 🔀HSDP | 💾CPU Offload (Layerwise) | 💾VAE-Patch-Parallel | 💾Quantization | 🔄Step Execution |
 |--------------------------|:---------:|:----------:|:---------------------:|:--------------:|:-----------------:|:-------------------:|:------:|:-------------------------:|:--------------------:|:--------------:|:----------------:|
 | **Bagel**                |     ✅     |     ✅      |           ✅           |       ✅        |         ✅         |          ❌          |   ✅    |             ✅             |          ❌           |       ❌        |        ✅         |
-| **Boogu-Image**          |     ❌     |     ❌      |           ❌           |       ✅        |         ❌         |          ❌          |   ❌    |             ❌             |          ❌           |       ❌         |        ❌         |
+| **Boogu-Image**          |     ❌     |     ❌     |           ❌           |       ✅        |         ❌         |          ❌          |   ❌    |             ❌             |          ❌           |       ❌         |        ❌         |
 | **FLUX.1-dev**           |     ✅     |     ✅      |           ❌           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |
 | **FLUX.1-schnell**       |     ❌     |     ✅      |           ❌           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |
 | **FLUX.2-klein**         |     ✅     |     ✅      |           ✅           |       ✅        |         ✅         |          ❌          |   ✅    |             ❌             |          ❌           |       ✅        |        ❌         |
