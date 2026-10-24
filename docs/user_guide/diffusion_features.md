@@ -135,13 +135,12 @@ The following tables show which models support each feature:
 >    like Cosmos3 swap their reasoner/generator components for model-level
 >    offload; see the [CPU Offload Guide](diffusion/cpu_offload.md).
 > 2. The **💾Quantization** column is collapsed for readability. See [Quantization](quantization/overview.md) for per-method and per-model support details.
-> 3. Boogu-Image Base Cache-DiT is validated with 2-GPU CFG parallelism,
->    4-GPU Ulysses sequence parallelism, and the composed 4-GPU CFG=2 ×
->    Ulysses=2 topology at 512x512. Use the conservative cache profile
->    (`max_warmup_steps=4`, `max_continuous_cached_steps=6`,
->    `residual_diff_threshold=0.12`). Degree-2/4 Ulysses uses
->    `ulysses_mode=advanced_uaa` in the validated runs. Edit and Edit-Turbo
->    multi-GPU Cache-DiT remain unvalidated.
+> 3. Boogu-Image Base Cache-DiT is validated with 2-GPU CFG parallelism and
+>    4-GPU Ulysses sequence parallelism at 512x512. Use the conservative cache
+>    profile (`max_warmup_steps=4`, `max_continuous_cached_steps=6`,
+>    `residual_diff_threshold=0.12`). Degree-4 Ulysses requires
+>    `ulysses_mode=advanced_uaa` because Boogu's KV-head count is not divisible
+>    by 4. Edit and Edit-Turbo multi-GPU Cache-DiT remain unvalidated.
 
 ### ImageGen
 
