@@ -1016,6 +1016,10 @@ class BooguImagePipeline(CFGParallelMixin, nn.Module, ProgressBarMixin, Supports
         prompt_images, preprocessed_images = self._extract_reference_images(req.prompts)
         has_reference = any(img is not None for img in preprocessed_images)
         task_type = "ti2i" if has_reference else "t2i"
+        if task_type == "ti2i" and str(self.od_config.cache_backend or "none").lower() == "cache_dit":
+            raise NotImplementedError(
+                "Cache-DiT is not supported for Boogu-Image Edit (TI2I) requests."
+            )
 
         # Turbo-specific schedules and extra arguments are not all represented
         # in the request-batch compatibility key, so Turbo stays at batch=1.

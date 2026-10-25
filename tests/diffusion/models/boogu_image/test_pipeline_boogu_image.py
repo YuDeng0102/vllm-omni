@@ -1694,6 +1694,18 @@ def test_forward_ti2i_text_only_two_predictions_with_ref():
         assert positive is not negative
 
 
+def test_forward_ti2i_rejects_cache_dit():
+    pipeline = _make_edit_forward_pipeline()
+    pipeline.od_config.cache_backend = "cache_dit"
+    req = _make_edit_request(height=64, width=64, num_inference_steps=2, guidance_scale=5.0)
+    req.sampling_params.guidance_scale_provided = True
+
+    with pytest.raises(NotImplementedError, match="Cache-DiT is not supported.*TI2I"):
+        pipeline.forward(req)
+
+    assert pipeline.transformer.calls == []
+
+
 def test_forward_ti2i_double_guidance_three_predictions():
     pipeline = _make_edit_forward_pipeline()
     num_steps = 2
